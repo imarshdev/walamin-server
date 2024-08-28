@@ -1,37 +1,26 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const cors = require("cors");
-const { MongoClient } = require("mongodb");
-
 const app = express();
-
-const PORT = process.env.PORT || 3001
-
-app.use(cors());
+const cors = require("cors")
 app.use(express.json());
+app.use(cors())
+const users = [];
 
-const uri =
-  "mongodb+srv://marshmansur004:zahara227..m@walamin.tg0bz.mongodb.net/?retryWrites=true&w=majority&appName=walamin";
-
-const client = new MongoClient(uri);
-const db = client.db("walamin_users");
-const usersCollection = db.collection("users");
-
+app.get("/users", (req, res) => {
+  res.json(users);
+});
 
 app.post("/users", async (req, res) => {
   try {
-    const existingUser = await usersCollection.findOne({ name: req.body.name });
-    if (existingUser) {
-      return res
-        .status(200)
-        .send({ message: "User already exists, logged in successfully" });
+    if (!req.body.name || !req.body.password) {
+      return res.status(400).send("Name and password are required");
     }
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const user = { name: req.body.name, password: hashedPassword };
-    await usersCollection.insertOne(user);
+    users.push(user);
     res.status(201).send({ message: "User created successfully" });
   } catch (error) {
-    console.error("Error creating user:", error);
+    console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
   }
 });
@@ -41,14 +30,14 @@ app.post("/users/login", async (req, res) => {
     if (!req.body.name || !req.body.password) {
       return res.status(400).send("Name and password are required");
     }
-    const user = await usersCollection.findOne({ name: req.body.name });
+    const user = users.find((user) => user.name === req.body.name);
     if (!user) {
       return res.status(400).send("User not found");
     }
     if (await bcrypt.compare(req.body.password, user.password)) {
       res.send({ success: true });
     } else {
-      res.send({ error: "Invalid password" });
+      res.send({ success: false });
     }
   } catch (error) {
     console.error(error);
@@ -56,6 +45,6 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+app.listen(3000, () => {
+  console.log("Server listening on port 3000");
 });
