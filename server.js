@@ -54,15 +54,6 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-app.get("/users/:username", async (req, res) => {
-  const username = req.params.username;
-  const user = await users.findOne({ username });
-  if (user) {
-    res.json({ firstName: user.firstName, lastName: user.lastName });
-  } else {
-    res.status(404).json({ error: "User not found" });
-  }
-});
 
 
 app.listen(3000, () => {
