@@ -8,8 +8,7 @@ app.use(cors());
 
 const port = process.env.PORT || 4000;
 
-const uri =
-  "mongodb+srv://marshmansur004:zahara227..m@walamin.tg0bz.mongodb.net/?retryWrites=true&w=majority&appName=walamin";
+const uri = process.env.MONGO_URI
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
