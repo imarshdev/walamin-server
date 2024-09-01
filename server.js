@@ -1,45 +1,28 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const app = express();
+const dotenv = require("dotenv");
 const cors = require("cors");
+
+
+dotenv.config();
+
+const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors()); // Enable CORS for all routes
 
-const port = process.env.PORT || 4000;
+mongoose.connect(process.env.MONGO_URI);
 
-const uri = process.env.MONGO_URI
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
+const userSchema = new mongoose.Schema({
+  username: String,
+  password: String,
 });
 
-const db = client.db();
-const usersCollection = db.collection("users");
-
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    // Ensures that the client will close when you finish/error
-  }
-}
-run().catch(console.dir);
+const User = mongoose.model("User", userSchema);
 
 app.get("/users", async (req, res) => {
   try {
-    const users = await usersCollection.find().toArray();
+    const users = await User.find().select("-password"); // exclude password field
     res.json(users);
   } catch (error) {
     console.error(error);
@@ -47,50 +30,28 @@ app.get("/users", async (req, res) => {
   }
 });
 
-app.post("/users", async (req, res) => {
-  try {
-    const { username, password, token, firstName, lastName } = req.body;
-    if (!username || !password || !token || !firstName || !lastName) {
-      return res.status(400).send("All fields are required");
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedToken = await bcrypt.hash(token, 10);
-    const user = {
-      username,
-      password: hashedPassword,
-      token: hashedToken,
-      firstName,
-      lastName,
-    };
-    await usersCollection.insertOne(user);
-    res.status(201).send({ message: "User created successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: "Internal Server Error" });
-  }
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = new User({ username, password: hashedPassword });
+  await user.save();
+  res.send({ message: "User created successfully" });
 });
 
-app.post("/users/login", async (req, res) => {
-  try {
-    const { username, token } = req.body;
-    if (!username || !token) {
-      return res.status(400).send("Username and token are required");
-    }
-    const user = await usersCollection.findOne({ username });
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    if (await bcrypt.compare(token, user.token)) {
-      res.send({ success: true });
-    } else {
-      res.send({ success: false });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: "Internal Server Error" });
+
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(404).send({ message: "User not found" });
   }
+  const isValidPassword = await bcrypt.compare(password, user.password);
+  if (!isValidPassword) {
+    return res.status(401).send({ message: "Invalid password" });
+  }
+  res.send({ message: "Login successful" });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+app.listen(process.env.PORT, () => {
+  console.log(`Server listening on port ${process.env.PORT}`);
 });
