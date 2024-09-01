@@ -1,27 +1,27 @@
-GET http://localhost:4000/users
+GET https://walamin-server.onrender.com/users
 
 
 ###
 
-POST  http://localhost:4000/users
+POST  https://walamin-server.onrender.com/register
 Content-Type: application/json
 
 {
-  "username": "marsh",
+  "username": "Marsh",
   "password": "zahara",
   "token": "123456",
-  "firstName": "marsh",
-  "lastName": "mansur"
+  "firstName": "Marsh",
+  "lastName": "Mansur"
 }
 
 
 ###
 
-POST  https://walamin-server.onrender.com/users/login
+POST  https://walamin-server.onrender.com/login
 Content-Type: application/json
 
 {
-  "username": "marsh",
+  "username": "Marsh",
   "password": "zahara",
   "token": "123456",
   "firstName": "marsh",
