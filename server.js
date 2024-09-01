@@ -6,6 +6,8 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cors());
 
+const port = process.env.PORT || 4000;
+
 const uri =
   "mongodb+srv://marshmansur004:zahara227..m@walamin.tg0bz.mongodb.net/?retryWrites=true&w=majority&appName=walamin";
 
@@ -90,6 +92,6 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server listening on port 3000");
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
 });

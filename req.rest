@@ -7,11 +7,11 @@ POST  http://localhost:3000/users
 Content-Type: application/json
 
 {
-  "username": "marsh",
-  "password": "zahara",
+  "username": "brian",
+  "password": "brian",
   "token": "123456",
-  "firstName": "marsh",
-  "lastName": "mansur"
+  "firstName": "brian",
+  "lastName": "brian"
 }
 
 
