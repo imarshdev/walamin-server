@@ -1,13 +1,49 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const cors = require("cors");
 app.use(express.json());
 app.use(cors());
-const users = [];
 
-app.get("/users", (req, res) => {
-  res.json(users);
+const uri =
+  "mongodb+srv://marshmansur004:zahara227..m@walamin.tg0bz.mongodb.net/?retryWrites=true&w=majority&appName=walamin";
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+const db = client.db();
+const usersCollection = db.collection("users");
+
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    await client.connect();
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
+  } finally {
+    // Ensures that the client will close when you finish/error
+  }
+}
+run().catch(console.dir);
+
+app.get("/users", async (req, res) => {
+  try {
+    const users = await usersCollection.find().toArray();
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
 });
 
 app.post("/users", async (req, res) => {
@@ -25,7 +61,7 @@ app.post("/users", async (req, res) => {
       firstName,
       lastName,
     };
-    users.push(user);
+    await usersCollection.insertOne(user);
     res.status(201).send({ message: "User created successfully" });
   } catch (error) {
     console.error(error);
@@ -39,7 +75,7 @@ app.post("/users/login", async (req, res) => {
     if (!username || !token) {
       return res.status(400).send("Username and token are required");
     }
-    const user = users.find((user) => user.username === username);
+    const user = await usersCollection.findOne({ username });
     if (!user) {
       return res.status(404).send("User not found");
     }
@@ -53,8 +89,6 @@ app.post("/users/login", async (req, res) => {
     res.status(500).send({ message: "Internal Server Error" });
   }
 });
-
-
 
 app.listen(3000, () => {
   console.log("Server listening on port 3000");

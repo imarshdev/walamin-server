@@ -1,9 +1,9 @@
-GET https://walamin-server.onrender.com/users
+GET http://localhost:3000/users
 
 
 ###
 
-POST  https://walamin-server.onrender.com/users
+POST  http://localhost:3000/users
 Content-Type: application/json
 
 {
