@@ -4,8 +4,16 @@ const { MongoClient } = require("mongodb");
 const app = express();
 const cors = require("cors");
 const dotenv = require("dotenv");
+const session = require("express-session");
+const MongoDBStore = require("connect-mongodb-session")(session);
+
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://client-epae.onrender.com", // Allow requests from your frontend domain
+    credentials: true, // Allow credentials (session cookies) to be included in requests
+  })
+);
 
 dotenv.config();
 const port = process.env.PORT || 4000;
@@ -15,6 +23,20 @@ const client = new MongoClient(process.env.MONGO_URI);
 
 const db = client.db();
 const usersCollection = db.collection("users");
+
+const store = new MongoDBStore({
+  uri: process.env.MONGO_URI,
+  collection: "sessions",
+});
+
+app.use(
+  session({
+    secret: process.env.SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store,
+  })
+);
 
 async function run() {
   try {
@@ -158,10 +180,65 @@ app.post("/users/login", async (req, res) => {
       return res.status(404).send("User not found");
     }
     if (await bcrypt.compare(token, user.token)) {
-      res.send({ success: true });
+      req.session.userId = user._id;
+      console.log(req.session); 
+      res.send({
+        success: true,
+        name: user.firstName + " " + user.lastName,
+      });
     } else {
       res.send({ success: false });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.post("/rides", async (req, res) => {
+  try {
+    const {
+      rideCategory,
+      pickupLocation,
+      dropoffLocation,
+      rideDate,
+      rideTime,
+    } = req.body;
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).send("Unauthorized");
+    }
+    const user = await usersCollection.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    user.rides.push({
+      rideCategory,
+      pickupLocation,
+      dropoffLocation,
+      rideDate,
+      rideTime,
+      rideStatus: "booked",
+    });
+    await usersCollection.updateOne({ _id: userId }, { $set: user });
+    res.send({ message: "Ride booked successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/user", async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).send("Unauthorized");
+    }
+    const user = await usersCollection.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    res.send({ name: user.firstName + " " + user.lastName });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
