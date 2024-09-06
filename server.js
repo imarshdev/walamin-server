@@ -10,7 +10,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://client-epae.onrender.com/", // Allow requests from your frontend domain
+    origin: "https://client-epae.onrender.com", // Allow requests from your frontend domain
     credentials: true, // Allow credentials (session cookies) to be included in requests
   })
 );
