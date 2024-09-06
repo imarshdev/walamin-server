@@ -10,7 +10,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://client-epae.onrender.com", // Allow requests from your frontend domain
+    origin: "https://walamin-server.onrender.com", // Allow requests from your frontend domain
     credentials: true, // Allow credentials (session cookies) to be included in requests
   })
 );
@@ -69,15 +69,15 @@ app.post("/users", async (req, res) => {
     if (!username || !password || !token || !firstName || !lastName) {
       return res.status(400).send("All fields are required");
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
     const hashedToken = await bcrypt.hash(token, 10);
     const user = {
       username,
-      password: hashedPassword,
+      password,
       token: hashedToken,
       firstName,
       lastName,
       rides: [],
+      expressRides: [],
     };
     await usersCollection.insertOne(user);
     res.status(201).send({ message: "User created successfully" });
@@ -132,11 +132,73 @@ app.post("/ride", async (req, res) => {
       rideDate,
       rideTime,
       rideStatus: "booked",
+      timestamp: new Date(),
     });
 
     await usersCollection.updateOne({ username }, { $set: user });
 
     res.send({ message: "Ride booked successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/all-rides", async (req, res) => {
+  try {
+    const users = await usersCollection.find().toArray();
+    const allRides = users.reduce((acc, user) => {
+      acc[user.username] = user.rides;
+      return acc;
+    }, {});
+    res.json(allRides);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/all-express-rides", async (req, res) => {
+  try {
+    const users = await usersCollection.find().toArray();
+    const allExpressRides = users.reduce((acc, user) => {
+      acc[user.username] = {
+        expressRides: user.expressRides,
+        contact: user.password,
+      };
+      return acc;
+    }, {});
+    res.json(allExpressRides);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.post("/rides/express", async (req, res) => {
+  try {
+    const { username, token, origin, destination } = req.body;
+    if (!username || !token || !origin || !destination) {
+      return res.status(400).send("All fields are required");
+    }
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!(await bcrypt.compare(token, user.token))) {
+      return res.status(401).send("Invalid token");
+    }
+    if (!user.expressRides) {
+      user.expressRides = [];
+    }
+    user.expressRides.push({
+      origin,
+      destination,
+      rideStatus: "booked",
+      timestamp: new Date(),
+    });
+    await usersCollection.updateOne({ username }, { $set: user });
+    res.send({ message: "Express ride booked successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
@@ -163,6 +225,34 @@ app.get("/rides", async (req, res) => {
     }
 
     res.json(user.rides);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+
+app.get("/user/details", async (req, res) => {
+  try {
+    const { username, token } = req.query;
+    if (!username || !token) {
+      return res.status(400).send("Username and token are required");
+    }
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!(await bcrypt.compare(token, user.token))) {
+      return res.status(401).send("Invalid token");
+    }
+    const userDetails = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      contact: user.password,
+      username: user.username,
+      rides: user.rides,
+    };
+    res.json(userDetails);
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
