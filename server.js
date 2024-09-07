@@ -205,6 +205,25 @@ app.post("/rides/express", async (req, res) => {
   }
 });
 
+app.post("/decline-ride", async (req, res) => {
+  try {
+    const { username, rideIndex } = req.body;
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!user.declinedRides) {
+      user.declinedRides = [];
+    }
+    user.declinedRides.push(rideIndex);
+    await usersCollection.updateOne({ username }, { $set: user });
+    res.send({ message: "Ride declined successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
 
 app.get("/rides", async (req, res) => {
   try {
