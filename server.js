@@ -163,7 +163,9 @@ app.get("/all-express-rides", async (req, res) => {
     const users = await usersCollection.find().toArray();
     const allExpressRides = users.reduce((acc, user) => {
       acc[user.username] = {
-        expressRides: user.expressRides,
+        expressRides: user.expressRides.filter(
+          (ride) => !ride.acceptedBy || ride.acceptedBy === req.query.username
+        ),
         contact: user.password,
       };
       return acc;
@@ -329,6 +331,26 @@ app.get("/user", async (req, res) => {
       return res.status(404).send("User not found");
     }
     res.send({ name: user.firstName + " " + user.lastName });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.post("/accept-ride", async (req, res) => {
+  try {
+    const { username, rideId } = req.body;
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    const ride = user.expressRides.find((ride) => ride.timestamp === rideId);
+    if (!ride) {
+      return res.status(404).send("Ride not found");
+    }
+    ride.acceptedBy = username;
+    await usersCollection.updateOne({ username }, { $set: user });
+    res.send({ message: "Ride accepted successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
