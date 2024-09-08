@@ -192,6 +192,7 @@ app.post("/rides/express", async (req, res) => {
       user.expressRides = [];
     }
     user.expressRides.push({
+      _id: new MongoClient.ObjectId(),
       origin,
       destination,
       rideStatus: "booked",
