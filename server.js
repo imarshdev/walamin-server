@@ -179,7 +179,7 @@ app.get("/all-express-rides", async (req, res) => {
 
 app.post("/rides/express", async (req, res) => {
   try {
-    const { username, token, origin, destination } = req.body;
+    const { username, token, origin, destination, cost } = req.body;
     if (!username || !token || !origin || !destination) {
       return res.status(400).send("All fields are required");
     }
@@ -196,6 +196,7 @@ app.post("/rides/express", async (req, res) => {
     user.expressRides.push({
       origin,
       destination,
+      cost,
       rideStatus: "booked",
       timestamp: new Date(),
     });
