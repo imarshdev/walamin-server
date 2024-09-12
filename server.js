@@ -35,11 +35,6 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store,
-    cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      httpOnly: true,
-      secure: true, // Set to true in production
-    },
   })
 );
 
@@ -270,34 +265,26 @@ app.get("/user/details", async (req, res) => {
 app.post("/users/login", async (req, res) => {
   try {
     const { username, token } = req.body;
+    if (!username || !token) {
+      return res.status(400).send("Username and token are required");
+    }
     const user = await usersCollection.findOne({ username });
     if (!user) {
       return res.status(404).send("User not found");
     }
     if (await bcrypt.compare(token, user.token)) {
       req.session.userId = user._id;
-      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-      res.send({ success: true, name: user.firstName + " " + user.lastName });
+      console.log(req.session); 
+      res.send({
+        success: true,
+        name: user.firstName + " " + user.lastName,
+      });
     } else {
       res.send({ success: false });
     }
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
-  }
-});
-
-app.use(async (req, res, next) => {
-  if (req.session.userId) {
-    const user = await usersCollection.findOne({ _id: req.session.userId });
-    if (user) {
-      res.redirect("/home"); // Redirect to /home route
-    } else {
-      req.session.destroy();
-      res.redirect("/login");
-    }
-  } else {
-    res.redirect("/login");
   }
 });
 
