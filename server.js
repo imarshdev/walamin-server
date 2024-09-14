@@ -376,10 +376,6 @@ app.post("/location", async (req, res) => {
     if (await bcrypt.compare(token, user.token)) {
       req.session.userId = user._id;
       console.log(req.session);
-      res.send({
-        success: true,
-        name: user.firstName + " " + user.lastName,
-      });
     } else {
       res.send({ success: false });
     }
@@ -396,13 +392,17 @@ app.post("/location", async (req, res) => {
         },
       }
     );
-    res.send({ message: "Location updated successfully" });
+
+    res.send({
+      success: true,
+      name: user.firstName + " " + user.lastName,
+      message: "Location updated successfully",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
   }
 });
-
 
 app.get("/all-locations", async (req, res) => {
   try {
