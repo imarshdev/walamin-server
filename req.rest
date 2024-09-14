@@ -6,6 +6,8 @@ GET http://localhost:4000/user/details?username=Hancho&token=246246
 ###
 GET http://localhost:4000/all-rides
 
+###
+GET https://walamin-server.onrender.com/all-locations
 
 ###
 GET http://localhost:4000/all-express-rides
