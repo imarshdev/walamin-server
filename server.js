@@ -78,6 +78,11 @@ app.post("/users", async (req, res) => {
       lastName,
       rides: [],
       expressRides: [],
+      location: {
+        latitude: null,
+        longitude: null,
+        updatedAt: null,
+      },
     };
     await usersCollection.insertOne(user);
     res.status(201).send({ message: "User created successfully" });
@@ -208,7 +213,6 @@ app.post("/rides/express", async (req, res) => {
   }
 });
 
-
 app.get("/rides", async (req, res) => {
   try {
     const { username, token } = req.query;
@@ -233,7 +237,6 @@ app.get("/rides", async (req, res) => {
     res.status(500).send({ message: "Internal Server Error" });
   }
 });
-
 
 app.get("/user/details", async (req, res) => {
   try {
@@ -274,7 +277,7 @@ app.post("/users/login", async (req, res) => {
     }
     if (await bcrypt.compare(token, user.token)) {
       req.session.userId = user._id;
-      console.log(req.session); 
+      console.log(req.session);
       res.send({
         success: true,
         name: user.firstName + " " + user.lastName,
@@ -352,6 +355,63 @@ app.post("/accept-ride", async (req, res) => {
     ride.acceptedBy = username;
     await usersCollection.updateOne({ username }, { $set: user });
     res.send({ message: "Ride accepted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.post("/location", async (req, res) => {
+  try {
+    const { username, latitude, longitude, token } = req.body;
+    if (!username || !latitude || !longitude || !token) {
+      return res
+        .status(400)
+        .send("Username, latitude, and longitude are required");
+    }
+    const user = await usersCollection.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (await bcrypt.compare(token, user.token)) {
+      req.session.userId = user._id;
+      console.log(req.session);
+      res.send({
+        success: true,
+        name: user.firstName + " " + user.lastName,
+      });
+    } else {
+      res.send({ success: false });
+    }
+    // Update user location
+    await usersCollection.updateOne(
+      { username },
+      {
+        $set: {
+          location: {
+            latitude,
+            longitude,
+            updatedAt: new Date(),
+          },
+        },
+      }
+    );
+    res.send({ message: "Location updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+
+app.get("/all-locations", async (req, res) => {
+  try {
+    const users = await usersCollection.find().toArray();
+    const locations = users.map((user) => ({
+      username: user.username,
+      location: user.location,
+    }));
+    res.json(locations);
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal Server Error" });
