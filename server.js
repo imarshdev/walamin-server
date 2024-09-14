@@ -15,12 +15,6 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://client-epae.onrender.com");
-  res.header("Access-Control-Allow-Credentials", true);
-  next();
-});
-
 dotenv.config();
 const port = process.env.PORT || 4000;
 
