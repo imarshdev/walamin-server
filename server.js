@@ -6,7 +6,16 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
+const http = require("http");
+const socketIo = require("socket.io");
 
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "https://client-epae.onrender.com", // Allow requests from your frontend domain
+    credentials: true, // Allow credentials (session cookies) to be included in requests
+  },
+});
 app.use(express.json());
 app.use(
   cors({
@@ -37,6 +46,19 @@ app.use(
     store,
   })
 );
+
+io.on("connection", (socket) => {
+  console.log("new client connected");
+
+  socket.on("orderRide", (rideDetails) => {
+    io.emit("newRide", rideDetails);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("client disconnected");
+  });
+});
+
 
 async function run() {
   try {
