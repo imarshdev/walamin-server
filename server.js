@@ -32,7 +32,7 @@ const client = new MongoClient(process.env.MONGO_URI);
 
 const db = client.db();
 const usersCollection = db.collection("users");
-
+const ridesCollection = db.collection("rides"); // Define this after connecting to the database
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI,
   collection: "sessions",
@@ -47,18 +47,57 @@ app.use(
   })
 );
 
-io.on("connection", (socket) => {
-  console.log("new client connected");
+// Add these new variables at the top
+const pendingRides = {}; // To store rides that are currently pending
+const rideResponses = {}; // To track responses for each ride
 
+io.on("connection", (socket) => {
+  console.log("New client connected");
+
+  // Listen for ride orders
   socket.on("orderRide", (rideDetails) => {
-    io.emit("newRide", rideDetails);
+    console.log(rideDetails);
+    const rideId = new Date().getTime().toString();
+    pendingRides[rideId] = { ...rideDetails, rideId, status: "pending" };
+
+    // Broadcast to all drivers
+    socket.broadcast.emit("newRide", pendingRides[rideId]);
+
+    // Handle ride acceptance timeout
+    setTimeout(() => {
+      if (pendingRides[rideId].status === "pending") {
+        io.to(socket.id).emit("rideUpdate", {
+          message: "We are sorry, no one was available to take your ride.",
+        });
+        delete pendingRides[rideId];
+      }
+    }, 60000); // 1 minute
   });
 
+  // Listen for ride acceptances
+  socket.on("acceptRide", (rideId, driverUsername) => {
+    const ride = pendingRides[rideId];
+    if (ride) {
+      ride.status = "accepted";
+      ride.acceptedBy = driverUsername;
+
+      // Notify both user and driver
+      io.to(ride.userId).emit("rideUpdate", {
+        message: `Your ride has been accepted by ${driverUsername}.`,
+      });
+      socket.emit("rideUpdate", {
+        message: `You accepted the ride.`,
+      });
+
+      delete pendingRides[rideId];
+    }
+  });
+
+  // Handle disconnection
   socket.on("disconnect", () => {
-    console.log("client disconnected");
+    console.log("Client disconnected");
   });
 });
-
 
 async function run() {
   try {
